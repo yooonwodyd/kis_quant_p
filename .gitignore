@@ -1,0 +1,28 @@
+.DS_Store
+
+# build
+.gradle/
+build/
+v1/.gradle/
+v1/build/
+
+# local env
+p_env
+p_env.properties
+v1/p_env
+v1/p_env.properties
+.env
+
+# IDE
+.idea/
+*.iml
+
+# local AI/tooling
+AGENTS.md
+agents.md
+agent.md
+CLAUDE.md
+GEMINI.md
+.codex/
+.agents/
+.claude/
