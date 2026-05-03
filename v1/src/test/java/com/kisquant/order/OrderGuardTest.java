@@ -16,4 +16,11 @@ class OrderGuardTest {
 				.isInstanceOf(IllegalArgumentException.class)
 				.hasMessageContaining("001510");
 	}
+
+	@Test
+	void rejectsQuantityOtherThanOneShare() {
+		assertThatThrownBy(() -> this.guard.validateMarketOrder("001510", 2))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("1");
+	}
 }
