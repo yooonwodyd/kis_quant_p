@@ -22,9 +22,20 @@ public final class OrderGuard {
 		return this.allowedSymbol;
 	}
 
+	public int fixedOrderQuantity() {
+		return this.fixedOrderQuantity;
+	}
+
 	public void validateSymbol(String symbol) {
 		if (!this.allowedSymbol.equals(symbol)) {
 			throw new IllegalArgumentException("Only symbol " + this.allowedSymbol + " is allowed");
+		}
+	}
+
+	public void validateMarketOrder(String symbol, int quantity) {
+		validateSymbol(symbol);
+		if (quantity != this.fixedOrderQuantity) {
+			throw new IllegalArgumentException("Only " + this.fixedOrderQuantity + " share order is allowed");
 		}
 	}
 }
