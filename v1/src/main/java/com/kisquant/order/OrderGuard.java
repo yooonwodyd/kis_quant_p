@@ -38,4 +38,15 @@ public final class OrderGuard {
 			throw new IllegalArgumentException("Only " + this.fixedOrderQuantity + " share order is allowed");
 		}
 	}
+
+	public void validateLimitOrder(String symbol, int quantity, BigDecimal price) {
+		validateMarketOrder(symbol, quantity);
+		if (price == null || price.signum() <= 0) {
+			throw new IllegalArgumentException("Limit order price must be greater than 0");
+		}
+		BigDecimal orderAmount = price.multiply(BigDecimal.valueOf(quantity));
+		if (orderAmount.compareTo(this.maxOrderKrw) > 0) {
+			throw new IllegalArgumentException("Order amount must not exceed " + this.maxOrderKrw.toPlainString() + " KRW");
+		}
+	}
 }
