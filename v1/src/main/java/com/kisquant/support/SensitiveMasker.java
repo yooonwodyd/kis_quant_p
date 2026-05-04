@@ -16,7 +16,10 @@ public final class SensitiveMasker {
 	private final List<String> exactValuesToMask;
 
 	public SensitiveMasker(String accountNumber, String accountProductCode) {
-		this.exactValuesToMask = List.of();
+		this.exactValuesToMask = List.of(
+				nullToEmpty(accountNumber),
+				nullToEmpty(accountNumber) + "-" + nullToEmpty(accountProductCode)
+		);
 	}
 
 	public String mask(String value) {
@@ -30,5 +33,9 @@ public final class SensitiveMasker {
 			}
 		}
 		return masked;
+	}
+
+	private static String nullToEmpty(String value) {
+		return value == null ? "" : value;
 	}
 }
