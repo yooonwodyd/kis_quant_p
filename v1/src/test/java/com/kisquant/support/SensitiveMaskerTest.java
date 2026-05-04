@@ -24,4 +24,20 @@ class SensitiveMaskerTest {
 		assertThat(masked).doesNotContain("secret-value");
 		assertThat(masked).contains("001510");
 	}
+
+	@Test
+	void masksFullAccountNumber() {
+		SensitiveMasker masker = new SensitiveMasker("12345678", "01");
+
+		String masked = masker.mask("""
+				{
+				  "CANO": "12345678",
+				  "account": "12345678-01",
+				  "safe": "001510"
+				}
+				""");
+
+		assertThat(masked).doesNotContain("12345678");
+		assertThat(masked).contains("001510");
+	}
 }
