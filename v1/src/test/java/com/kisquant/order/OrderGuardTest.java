@@ -23,4 +23,11 @@ class OrderGuardTest {
 				.isInstanceOf(IllegalArgumentException.class)
 				.hasMessageContaining("1");
 	}
+
+	@Test
+	void rejectsOrdersOverThirtyThousandWon() {
+		assertThatThrownBy(() -> this.guard.validateLimitOrder("001510", 1, BigDecimal.valueOf(30_001)))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("30000");
+	}
 }
