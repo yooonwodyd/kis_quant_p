@@ -5,4 +5,6 @@ import com.kisquant.web.CallResult;
 public interface KisClient {
 
 	CallResult issueToken();
+
+	CallResult balance();
 }

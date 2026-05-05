@@ -66,6 +66,31 @@ final class KisRestClient implements KisClient {
 		return result;
 	}
 
+	@Override
+	public CallResult balance() {
+		return getWithAuth("balance", "/uapi/domestic-stock/v1/trading/inquire-balance", "TTTC8434R", balanceParams());
+	}
+
+	/**
+	 * KIS 잔고 조회 파라미터.
+	 * 일단 문서에서 요구하는 기본값을 그대로 맞춰본다.
+	 */
+	private Map<String, Object> balanceParams() {
+		Map<String, Object> params = new LinkedHashMap<>();
+		params.put("CANO", this.properties.accountNumber());
+		params.put("ACNT_PRDT_CD", this.properties.accountProductCode());
+		params.put("AFHR_FLPR_YN", "N");
+		params.put("OFL_YN", "");
+		params.put("INQR_DVSN", "01");
+		params.put("UNPR_DVSN", "01");
+		params.put("FUND_STTL_ICLD_YN", "N");
+		params.put("FNCG_AMT_AUTO_RDPT_YN", "N");
+		params.put("PRCS_DVSN", "00");
+		params.put("CTX_AREA_FK100", "");
+		params.put("CTX_AREA_NK100", "");
+		return params;
+	}
+
 	private TokenCall tokenPost(Object safeRequest, Map<String, String> body) {
 		try {
 			String responseBody = this.restClient.post()
@@ -102,6 +127,46 @@ final class KisRestClient implements KisClient {
 		headers.set("tr_id", trId);
 		headers.set("custtype", CUSTOMER_TYPE_PERSONAL);
 		headers.set("tr_cont", "");
+	}
+
+	/**
+	 * 인증이 필요한 KIS GET API 호출.
+	 * URL만으로 업무가 끝나지 않고 tr_id까지 맞춰야 한다.
+	 */
+	private CallResult getWithAuth(String name, String path, String trId, Map<String, Object> params) {
+		ensureToken();
+		Object safeRequest = safeRequest("GET", path, trId, params);
+		try {
+			String body = this.restClient.get()
+					.uri(uriBuilder -> {
+						var builder = uriBuilder.path(path);
+						params.forEach(builder::queryParam);
+						return builder.build();
+					})
+					.headers(headers -> applyKisHeaders(headers, trId))
+					.retrieve()
+					.toEntity(String.class)
+					.getBody();
+			return result(name, 200, safeRequest, body);
+		}
+		catch (RestClientResponseException ex) {
+			return result(name, ex.getStatusCode(), safeRequest, ex.getResponseBodyAsString());
+		}
+	}
+
+	private Object safeRequest(String method, String path, String trId, Map<String, Object> values) {
+		Map<String, Object> safe = new LinkedHashMap<>();
+		safe.put("method", method);
+		safe.put("path", path);
+		safe.put("trId", trId);
+		safe.put("values", safeValues(values));
+		return safe;
+	}
+
+	private Map<String, Object> safeValues(Map<String, Object> values) {
+		Map<String, Object> safe = new LinkedHashMap<>();
+		values.forEach((key, value) -> safe.put(key, value instanceof String text ? this.masker.mask(text) : value));
+		return safe;
 	}
 
 	private CallResult result(String name, HttpStatusCode status, Object request, String rawResponse) {
