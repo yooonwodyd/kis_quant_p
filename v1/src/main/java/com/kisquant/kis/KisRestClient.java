@@ -96,6 +96,14 @@ final class KisRestClient implements KisClient {
 		}
 	}
 
+	@Override
+	public CallResult quote(String symbol) {
+		Map<String, Object> params = new LinkedHashMap<>();
+		params.put("FID_COND_MRKT_DIV_CODE", "J");
+		params.put("FID_INPUT_ISCD", symbol);
+		return getWithAuth("quote", "/uapi/domestic-stock/v1/quotations/inquire-price", "FHKST01010100", params);
+	}
+
 	/**
 	 * KIS 잔고 조회 파라미터.
 	 * 일단 문서에서 요구하는 기본값을 그대로 맞춰본다.

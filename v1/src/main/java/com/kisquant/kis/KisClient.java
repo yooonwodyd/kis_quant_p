@@ -9,4 +9,6 @@ public interface KisClient {
 	CallResult balance();
 
 	CallResult holdings();
+
+	CallResult quote(String symbol);
 }
