@@ -7,4 +7,6 @@ public interface KisClient {
 	CallResult issueToken();
 
 	CallResult balance();
+
+	CallResult holdings();
 }

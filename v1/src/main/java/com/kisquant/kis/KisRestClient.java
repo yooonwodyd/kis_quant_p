@@ -1,5 +1,7 @@
 package com.kisquant.kis;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +71,29 @@ final class KisRestClient implements KisClient {
 	@Override
 	public CallResult balance() {
 		return getWithAuth("balance", "/uapi/domestic-stock/v1/trading/inquire-balance", "TTTC8434R", balanceParams());
+	}
+
+	@Override
+	public CallResult holdings() {
+		ensureToken();
+		Map<String, Object> params = balanceParams();
+		Object safeRequest = safeRequest("GET", "/uapi/domestic-stock/v1/trading/inquire-balance", "TTTC8434R", params);
+		try {
+			String body = this.restClient.get()
+					.uri(uriBuilder -> {
+						var builder = uriBuilder.path("/uapi/domestic-stock/v1/trading/inquire-balance");
+						params.forEach(builder::queryParam);
+						return builder.build();
+					})
+					.headers(headers -> applyKisHeaders(headers, "TTTC8434R"))
+					.retrieve()
+					.toEntity(String.class)
+					.getBody();
+			return holdingsResult(200, safeRequest, body);
+		}
+		catch (RestClientResponseException ex) {
+			return holdingsResult(ex.getStatusCode().value(), safeRequest, ex.getResponseBodyAsString());
+		}
 	}
 
 	/**
@@ -179,6 +204,14 @@ final class KisRestClient implements KisClient {
 		return new CallResult(name, ok, status, request, parse(maskedRaw), parseJsonOrRaw(maskedRaw));
 	}
 
+	private CallResult holdingsResult(int status, Object request, String rawResponse) {
+		String maskedRaw = this.masker.mask(rawResponse == null ? "" : rawResponse);
+		Object structuredRaw = parseJsonOrRaw(maskedRaw);
+		Object parsed = Map.of("holdings", holdingsFrom(structuredRaw));
+		boolean ok = status >= 200 && status < 300 && isKisOk(rawResponse);
+		return new CallResult("holdings", ok, status, request, parsed, structuredRaw);
+	}
+
 	private Object parse(String raw) {
 		Map<String, String> fields = new LinkedHashMap<>();
 		for (String field : List.of("rt_cd", "msg_cd", "msg1", "KRX_FWDG_ORD_ORGNO", "ODNO", "ORD_TMD")) {
@@ -200,6 +233,46 @@ final class KisRestClient implements KisClient {
 		catch (JacksonException ex) {
 			return raw;
 		}
+	}
+
+	private List<Map<String, String>> holdingsFrom(Object raw) {
+		List<Map<String, String>> holdings = new ArrayList<>();
+		if (!(raw instanceof Map<?, ?> root) || !(root.get("output1") instanceof List<?> items)) {
+			return holdings;
+		}
+		for (Object item : items) {
+			if (item instanceof Map<?, ?> row) {
+				String holdingQuantity = text(row.get("hldg_qty"));
+				if (hasHoldingQuantity(holdingQuantity)) {
+					Map<String, String> holding = new LinkedHashMap<>();
+					holding.put("symbol", text(row.get("pdno")));
+					holding.put("name", text(row.get("prdt_name")));
+					holding.put("holdingQuantity", holdingQuantity);
+					holding.put("orderableQuantity", text(row.get("ord_psbl_qty")));
+					holding.put("averagePrice", text(row.get("pchs_avg_pric")));
+					holding.put("currentPrice", text(row.get("prpr")));
+					holding.put("valuationAmount", text(row.get("evlu_amt")));
+					holdings.add(holding);
+				}
+			}
+		}
+		return holdings;
+	}
+
+	private boolean hasHoldingQuantity(String value) {
+		if (value.isBlank()) {
+			return false;
+		}
+		try {
+			return new BigDecimal(value).compareTo(BigDecimal.ZERO) > 0;
+		}
+		catch (NumberFormatException ex) {
+			return true;
+		}
+	}
+
+	private String text(Object value) {
+		return value == null ? "" : String.valueOf(value);
 	}
 
 	private boolean isKisOk(String raw) {
