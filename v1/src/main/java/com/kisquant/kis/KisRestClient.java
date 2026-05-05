@@ -30,6 +30,7 @@ import tools.jackson.databind.ObjectMapper;
 @Component
 final class KisRestClient implements KisClient {
 
+	private static final String LIMIT_ORDER = "00";
 	private static final String CUSTOMER_TYPE_PERSONAL = "P";
 
 	private final RestClient restClient;
@@ -102,6 +103,19 @@ final class KisRestClient implements KisClient {
 		params.put("FID_COND_MRKT_DIV_CODE", "J");
 		params.put("FID_INPUT_ISCD", symbol);
 		return getWithAuth("quote", "/uapi/domestic-stock/v1/quotations/inquire-price", "FHKST01010100", params);
+	}
+
+	@Override
+	public CallResult buyable(String symbol, BigDecimal price) {
+		Map<String, Object> params = new LinkedHashMap<>();
+		params.put("CANO", this.properties.accountNumber());
+		params.put("ACNT_PRDT_CD", this.properties.accountProductCode());
+		params.put("PDNO", symbol);
+		params.put("ORD_UNPR", price.toPlainString());
+		params.put("ORD_DVSN", LIMIT_ORDER);
+		params.put("CMA_EVLU_AMT_ICLD_YN", "N");
+		params.put("OVRS_ICLD_YN", "N");
+		return getWithAuth("buyable", "/uapi/domestic-stock/v1/trading/inquire-psbl-order", "TTTC8908R", params);
 	}
 
 	/**
