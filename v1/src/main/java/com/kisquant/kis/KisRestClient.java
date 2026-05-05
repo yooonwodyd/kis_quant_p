@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -26,6 +27,8 @@ import tools.jackson.databind.ObjectMapper;
  */
 @Component
 final class KisRestClient implements KisClient {
+
+	private static final String CUSTOMER_TYPE_PERSONAL = "P";
 
 	private final RestClient restClient;
 	private final KisProperties properties;
@@ -77,6 +80,28 @@ final class KisRestClient implements KisClient {
 		catch (RestClientResponseException ex) {
 			return new TokenCall(ex.getResponseBodyAsString(), result("token", ex.getStatusCode(), safeRequest, ex.getResponseBodyAsString()));
 		}
+	}
+
+	/**
+	 * token 없으면 먼저 발급.
+	 * 실패했는데 재시도 루프를 돌리지는 않는다. 여기서는 연결 확인이 먼저다.
+	 */
+	private void ensureToken() {
+		if (this.accessToken == null || this.accessToken.isBlank()) {
+			issueToken();
+		}
+		if (this.accessToken == null || this.accessToken.isBlank()) {
+			throw new IllegalStateException("KIS access token is not available");
+		}
+	}
+
+	private void applyKisHeaders(HttpHeaders headers, String trId) {
+		headers.setBearerAuth(this.accessToken);
+		headers.set("appkey", this.properties.appKey());
+		headers.set("appsecret", this.properties.appSecret());
+		headers.set("tr_id", trId);
+		headers.set("custtype", CUSTOMER_TYPE_PERSONAL);
+		headers.set("tr_cont", "");
 	}
 
 	private CallResult result(String name, HttpStatusCode status, Object request, String rawResponse) {
