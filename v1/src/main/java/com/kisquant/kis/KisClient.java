@@ -23,4 +23,6 @@ public interface KisClient {
 	CallResult orderStatus(String kisOrderNo, String krxOrderOrgNo);
 
 	CallResult cancel(String kisOrderNo, String krxOrderOrgNo);
+
+	CallResult todayExecutions();
 }

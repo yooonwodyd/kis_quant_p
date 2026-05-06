@@ -152,6 +152,11 @@ final class KisRestClient implements KisClient {
 		return postWithAuth("cancel", "/uapi/domestic-stock/v1/trading/order-rvsecncl", "TTTC0013U", body);
 	}
 
+	@Override
+	public CallResult todayExecutions() {
+		return dailyCcld("today-executions", "", "");
+	}
+
 	private CallResult dailyCcld(String name, String kisOrderNo, String krxOrderOrgNo) {
 		String today = LocalDate.now().format(KIS_DATE);
 		Map<String, Object> params = new LinkedHashMap<>();
