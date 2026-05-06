@@ -71,6 +71,31 @@ class KisRestClientTest {
 		server.verify();
 	}
 
+	@Test
+	void marketBuyUsesMarketOrderCodeAndZeroPrice() {
+		RestClient.Builder builder = RestClient.builder().baseUrl("https://kis.test");
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		KisRestClient client = client(builder.build());
+
+		server.expect(requestTo("https://kis.test/oauth2/tokenP"))
+				.andRespond(withSuccess("""
+						{"access_token":"real-access-token","token_type":"Bearer","expires_in":86400}
+						""", MediaType.APPLICATION_JSON));
+		server.expect(requestTo("https://kis.test/uapi/domestic-stock/v1/trading/order-cash"))
+				.andExpect(method(HttpMethod.POST))
+				.andExpect(content().json("""
+						{"PDNO":"001510","ORD_DVSN":"01","ORD_QTY":"1","ORD_UNPR":"0"}
+						"""))
+				.andRespond(withSuccess("""
+						{"rt_cd":"0","msg_cd":"0","msg1":"OK","output":{"ODNO":"1","KRX_FWDG_ORD_ORGNO":"2","ORD_TMD":"152000"}}
+						""", MediaType.APPLICATION_JSON));
+
+		CallResult result = client.marketBuy();
+
+		assertThat(result.ok()).isTrue();
+		server.verify();
+	}
+
 	private static KisRestClient client(RestClient restClient) {
 		return new KisRestClient(
 				restClient,
