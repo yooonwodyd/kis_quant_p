@@ -22,6 +22,8 @@ public interface KisClient {
 
 	CallResult marketBuy();
 
+	CallResult marketSell();
+
 	CallResult orderStatus(String kisOrderNo, String krxOrderOrgNo);
 
 	CallResult cancel(String kisOrderNo, String krxOrderOrgNo);

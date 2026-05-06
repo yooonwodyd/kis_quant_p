@@ -138,6 +138,11 @@ final class KisRestClient implements KisClient {
 	}
 
 	@Override
+	public CallResult marketSell() {
+		return orderCash("market-sell", "TTTC0011U", MARKET_ORDER, "0");
+	}
+
+	@Override
 	public CallResult orderStatus(String kisOrderNo, String krxOrderOrgNo) {
 		return dailyCcld("order-status", kisOrderNo, krxOrderOrgNo);
 	}
