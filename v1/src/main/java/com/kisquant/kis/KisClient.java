@@ -15,4 +15,6 @@ public interface KisClient {
 	CallResult quote(String symbol);
 
 	CallResult buyable(String symbol, BigDecimal price);
+
+	CallResult limitBuy(BigDecimal price);
 }
