@@ -2,6 +2,8 @@ package com.kisquant.kis;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +32,7 @@ import tools.jackson.databind.ObjectMapper;
 @Component
 final class KisRestClient implements KisClient {
 
+	private static final DateTimeFormatter KIS_DATE = DateTimeFormatter.BASIC_ISO_DATE;
 	private static final String LIMIT_ORDER = "00";
 	private static final String EXCHANGE_KRX = "KRX";
 	private static final String CUSTOMER_TYPE_PERSONAL = "P";
@@ -126,6 +129,32 @@ final class KisRestClient implements KisClient {
 	@Override
 	public CallResult limitSell(BigDecimal price) {
 		return orderCash("sell", "TTTC0011U", LIMIT_ORDER, price.toPlainString());
+	}
+
+	@Override
+	public CallResult orderStatus(String kisOrderNo, String krxOrderOrgNo) {
+		return dailyCcld("order-status", kisOrderNo, krxOrderOrgNo);
+	}
+
+	private CallResult dailyCcld(String name, String kisOrderNo, String krxOrderOrgNo) {
+		String today = LocalDate.now().format(KIS_DATE);
+		Map<String, Object> params = new LinkedHashMap<>();
+		params.put("CANO", this.properties.accountNumber());
+		params.put("ACNT_PRDT_CD", this.properties.accountProductCode());
+		params.put("INQR_STRT_DT", today);
+		params.put("INQR_END_DT", today);
+		params.put("SLL_BUY_DVSN_CD", "00");
+		params.put("PDNO", this.orderGuard.allowedSymbol());
+		params.put("CCLD_DVSN", "00");
+		params.put("INQR_DVSN", "00");
+		params.put("INQR_DVSN_3", "00");
+		params.put("ORD_GNO_BRNO", krxOrderOrgNo);
+		params.put("ODNO", kisOrderNo);
+		params.put("INQR_DVSN_1", "");
+		params.put("CTX_AREA_FK100", "");
+		params.put("CTX_AREA_NK100", "");
+		params.put("EXCG_ID_DVSN_CD", EXCHANGE_KRX);
+		return getWithAuth(name, "/uapi/domestic-stock/v1/trading/inquire-daily-ccld", "TTTC0081R", params);
 	}
 
 	private CallResult orderCash(String name, String trId, String orderType, String orderPrice) {
