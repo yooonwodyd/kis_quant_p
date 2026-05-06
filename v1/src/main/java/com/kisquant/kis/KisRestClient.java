@@ -123,6 +123,11 @@ final class KisRestClient implements KisClient {
 		return orderCash("buy", "TTTC0012U", LIMIT_ORDER, price.toPlainString());
 	}
 
+	@Override
+	public CallResult limitSell(BigDecimal price) {
+		return orderCash("sell", "TTTC0011U", LIMIT_ORDER, price.toPlainString());
+	}
+
 	private CallResult orderCash(String name, String trId, String orderType, String orderPrice) {
 		Map<String, Object> body = new LinkedHashMap<>();
 		body.put("CANO", this.properties.accountNumber());
