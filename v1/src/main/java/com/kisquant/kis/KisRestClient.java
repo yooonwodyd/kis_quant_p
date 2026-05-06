@@ -136,6 +136,22 @@ final class KisRestClient implements KisClient {
 		return dailyCcld("order-status", kisOrderNo, krxOrderOrgNo);
 	}
 
+	@Override
+	public CallResult cancel(String kisOrderNo, String krxOrderOrgNo) {
+		Map<String, Object> body = new LinkedHashMap<>();
+		body.put("CANO", this.properties.accountNumber());
+		body.put("ACNT_PRDT_CD", this.properties.accountProductCode());
+		body.put("KRX_FWDG_ORD_ORGNO", krxOrderOrgNo);
+		body.put("ORGN_ODNO", kisOrderNo);
+		body.put("ORD_DVSN", LIMIT_ORDER);
+		body.put("RVSE_CNCL_DVSN_CD", "02");
+		body.put("ORD_QTY", String.valueOf(this.orderGuard.fixedOrderQuantity()));
+		body.put("ORD_UNPR", "0");
+		body.put("QTY_ALL_ORD_YN", "Y");
+		body.put("EXCG_ID_DVSN_CD", EXCHANGE_KRX);
+		return postWithAuth("cancel", "/uapi/domestic-stock/v1/trading/order-rvsecncl", "TTTC0013U", body);
+	}
+
 	private CallResult dailyCcld(String name, String kisOrderNo, String krxOrderOrgNo) {
 		String today = LocalDate.now().format(KIS_DATE);
 		Map<String, Object> params = new LinkedHashMap<>();
