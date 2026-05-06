@@ -1,6 +1,7 @@
 package com.kisquant.kis;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -11,6 +12,7 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -37,6 +39,35 @@ class KisRestClientTest {
 
 		assertThat(result.rawResponse().toString()).doesNotContain("real-access-token");
 		assertThat(accessToken(client)).isEqualTo("real-access-token");
+		server.verify();
+	}
+
+	@Test
+	void orderPostUsesContentLengthInsteadOfChunkedTransfer() {
+		RestClient.Builder builder = RestClient.builder().baseUrl("https://kis.test");
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		KisRestClient client = client(builder.build());
+
+		server.expect(requestTo("https://kis.test/oauth2/tokenP"))
+				.andRespond(withSuccess("""
+						{"access_token":"real-access-token","token_type":"Bearer","expires_in":86400}
+						""", MediaType.APPLICATION_JSON));
+		server.expect(requestTo("https://kis.test/uapi/domestic-stock/v1/trading/order-cash"))
+				.andExpect(method(HttpMethod.POST))
+				.andExpect(content().json("""
+						{"PDNO":"001510","ORD_DVSN":"00","ORD_QTY":"1","ORD_UNPR":"5190"}
+						"""))
+				.andExpect(request -> {
+					assertThat(request.getHeaders().getFirst(HttpHeaders.TRANSFER_ENCODING)).isNull();
+					assertThat(request.getHeaders().getContentLength()).isPositive();
+				})
+				.andRespond(withSuccess("""
+						{"rt_cd":"0","msg_cd":"0","msg1":"OK","output":{"ODNO":"1","KRX_FWDG_ORD_ORGNO":"2","ORD_TMD":"152000"}}
+						""", MediaType.APPLICATION_JSON));
+
+		CallResult result = client.limitBuy(BigDecimal.valueOf(5190));
+
+		assertThat(result.ok()).isTrue();
 		server.verify();
 	}
 
