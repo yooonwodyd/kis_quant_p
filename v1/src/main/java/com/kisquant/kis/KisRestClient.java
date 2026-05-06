@@ -31,6 +31,7 @@ import tools.jackson.databind.ObjectMapper;
 final class KisRestClient implements KisClient {
 
 	private static final String LIMIT_ORDER = "00";
+	private static final String EXCHANGE_KRX = "KRX";
 	private static final String CUSTOMER_TYPE_PERSONAL = "P";
 
 	private final RestClient restClient;
@@ -118,6 +119,24 @@ final class KisRestClient implements KisClient {
 		return getWithAuth("buyable", "/uapi/domestic-stock/v1/trading/inquire-psbl-order", "TTTC8908R", params);
 	}
 
+	public CallResult limitBuy(BigDecimal price) {
+		return orderCash("buy", "TTTC0012U", LIMIT_ORDER, price.toPlainString());
+	}
+
+	private CallResult orderCash(String name, String trId, String orderType, String orderPrice) {
+		Map<String, Object> body = new LinkedHashMap<>();
+		body.put("CANO", this.properties.accountNumber());
+		body.put("ACNT_PRDT_CD", this.properties.accountProductCode());
+		body.put("PDNO", this.orderGuard.allowedSymbol());
+		body.put("ORD_DVSN", orderType);
+		body.put("ORD_QTY", String.valueOf(this.orderGuard.fixedOrderQuantity()));
+		body.put("ORD_UNPR", orderPrice);
+		body.put("EXCG_ID_DVSN_CD", EXCHANGE_KRX);
+		body.put("SLL_TYPE", "");
+		body.put("CNDT_PRIC", "");
+		return postWithAuth(name, "/uapi/domestic-stock/v1/trading/order-cash", trId, body);
+	}
+
 	/**
 	 * KIS 잔고 조회 파라미터.
 	 * 일단 문서에서 요구하는 기본값을 그대로 맞춰본다.
@@ -198,6 +217,39 @@ final class KisRestClient implements KisClient {
 		}
 		catch (RestClientResponseException ex) {
 			return result(name, ex.getStatusCode(), safeRequest, ex.getResponseBodyAsString());
+		}
+	}
+
+	private CallResult postWithAuth(String name, String path, String trId, Map<String, Object> body) {
+		ensureToken();
+		Object safeRequest = safeRequest("POST", path, trId, body);
+		try {
+			byte[] bodyBytes = writeJsonBody(body);
+			String responseBody = this.restClient.post()
+					.uri(path)
+					.headers(headers -> applyKisHeaders(headers, trId))
+					.contentType(MediaType.APPLICATION_JSON)
+					.body(bodyBytes)
+					.retrieve()
+					.toEntity(String.class)
+					.getBody();
+			return result(name, 200, safeRequest, responseBody);
+		}
+		catch (RestClientResponseException ex) {
+			return result(name, ex.getStatusCode(), safeRequest, ex.getResponseBodyAsString());
+		}
+	}
+
+	/**
+	 * KIS 주문 쪽에서 chunked 전송이 걸리면 오류가 날 수 있다.
+	 * byte[]로 보내서 Content-Length가 잡히게 한다.
+	 */
+	private byte[] writeJsonBody(Map<?, ?> body) {
+		try {
+			return this.objectMapper.writeValueAsBytes(body);
+		}
+		catch (JacksonException ex) {
+			throw new IllegalStateException("Failed to serialize KIS request body", ex);
 		}
 	}
 
