@@ -20,6 +20,8 @@ public interface KisClient {
 
 	CallResult limitSell(BigDecimal price);
 
+	CallResult marketBuy();
+
 	CallResult orderStatus(String kisOrderNo, String krxOrderOrgNo);
 
 	CallResult cancel(String kisOrderNo, String krxOrderOrgNo);

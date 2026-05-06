@@ -34,6 +34,7 @@ final class KisRestClient implements KisClient {
 
 	private static final DateTimeFormatter KIS_DATE = DateTimeFormatter.BASIC_ISO_DATE;
 	private static final String LIMIT_ORDER = "00";
+	private static final String MARKET_ORDER = "01";
 	private static final String EXCHANGE_KRX = "KRX";
 	private static final String CUSTOMER_TYPE_PERSONAL = "P";
 
@@ -129,6 +130,11 @@ final class KisRestClient implements KisClient {
 	@Override
 	public CallResult limitSell(BigDecimal price) {
 		return orderCash("sell", "TTTC0011U", LIMIT_ORDER, price.toPlainString());
+	}
+
+	@Override
+	public CallResult marketBuy() {
+		return orderCash("market-buy", "TTTC0012U", MARKET_ORDER, "0");
 	}
 
 	@Override
