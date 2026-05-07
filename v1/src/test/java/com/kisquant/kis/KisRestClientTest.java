@@ -9,6 +9,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -93,6 +95,54 @@ class KisRestClientTest {
 		CallResult result = client.marketBuy();
 
 		assertThat(result.ok()).isTrue();
+		server.verify();
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void holdingsSummarizesOwnedStocksAndQuantities() {
+		RestClient.Builder builder = RestClient.builder().baseUrl("https://kis.test");
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		KisRestClient client = client(builder.build());
+
+		server.expect(requestTo("https://kis.test/oauth2/tokenP"))
+				.andRespond(withSuccess("""
+						{"access_token":"real-access-token","token_type":"Bearer","expires_in":86400}
+						""", MediaType.APPLICATION_JSON));
+		server.expect(request -> assertThat(request.getURI().getPath()).isEqualTo("/uapi/domestic-stock/v1/trading/inquire-balance"))
+				.andRespond(withSuccess("""
+						{
+						  "output1": [
+						    {
+						      "pdno": "001510",
+						      "prdt_name": "SK증권",
+						      "hldg_qty": "2",
+						      "ord_psbl_qty": "1",
+						      "pchs_avg_pric": "5495.0000",
+						      "prpr": "5430",
+						      "evlu_amt": "10860"
+						    }
+						  ],
+						  "rt_cd": "0",
+						  "msg_cd": "KIOK0510",
+						  "msg1": "조회가 완료되었습니다"
+						}
+						""", MediaType.APPLICATION_JSON));
+
+		CallResult result = client.holdings();
+
+		assertThat(result.ok()).isTrue();
+		Map<String, Object> parsed = (Map<String, Object>) result.parsedResponse();
+		List<Map<String, String>> holdings = (List<Map<String, String>>) parsed.get("holdings");
+		assertThat(holdings).containsExactly(Map.of(
+				"symbol", "001510",
+				"name", "SK증권",
+				"holdingQuantity", "2",
+				"orderableQuantity", "1",
+				"averagePrice", "5495.0000",
+				"currentPrice", "5430",
+				"valuationAmount", "10860"
+		));
 		server.verify();
 	}
 
