@@ -77,6 +77,29 @@
     </p>
   </section>
 
+  <section class="panel">
+    <h2>실전 주문</h2>
+    <div class="buttons">
+      <button onclick="liveBuy()">1주 지정가 매수</button>
+      <button onclick="marketBuy()">1주 시장가 매수</button>
+      <button onclick="liveSell()">1주 지정가 매도</button>
+      <button onclick="marketSell()">1주 시장가 매도</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>주문/체결</h2>
+    <p>
+      <input id="orderNo" placeholder="ODNO">
+      <input id="orgNo" placeholder="KRX_FWDG_ORD_ORGNO">
+    </p>
+    <div class="buttons">
+      <button onclick="orderStatus()">주문 조회</button>
+      <button onclick="cancelOrder()">미체결 취소</button>
+      <button onclick="callApi('GET', '/api/kis/executions/today')">당일 체결</button>
+    </div>
+  </section>
+
   <pre id="result">대기 중</pre>
 </main>
 
@@ -105,6 +128,55 @@ function buyable() {
     return;
   }
   callApi('GET', `/api/kis/orders/buyable?symbol=001510&price=${encodeURIComponent(value)}`);
+}
+
+function requirePrice() {
+  const value = price();
+  if (!value) {
+    result.textContent = '지정가를 입력';
+    return null;
+  }
+  return value;
+}
+
+function orderNo() {
+  return document.getElementById('orderNo').value.trim();
+}
+
+function orgNo() {
+  return document.getElementById('orgNo').value.trim();
+}
+
+function liveBuy() {
+  const value = requirePrice();
+  if (value) {
+    callApi('POST', `/api/kis/orders/live-buy?price=${encodeURIComponent(value)}`);
+  }
+}
+
+function liveSell() {
+  const value = requirePrice();
+  if (value) {
+    callApi('POST', `/api/kis/orders/live-sell?price=${encodeURIComponent(value)}`);
+  }
+}
+
+function marketBuy() {
+  callApi('POST', '/api/kis/orders/market-buy');
+}
+
+function marketSell() {
+  callApi('POST', '/api/kis/orders/market-sell');
+}
+
+function orderStatus() {
+  const organizationNo = orgNo();
+  const query = organizationNo ? `?krxOrderOrgNo=${encodeURIComponent(organizationNo)}` : '';
+  callApi('GET', `/api/kis/orders/${encodeURIComponent(orderNo())}${query}`);
+}
+
+function cancelOrder() {
+  callApi('POST', `/api/kis/orders/${encodeURIComponent(orderNo())}/cancel?krxOrderOrgNo=${encodeURIComponent(orgNo())}`);
 }
 </script>
 </body>
