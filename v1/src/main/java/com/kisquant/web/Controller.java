@@ -1,7 +1,10 @@
 package com.kisquant.web;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -95,5 +98,10 @@ final class Controller {
 	@GetMapping("/executions/today")
 	CallResult todayExecutions() {
 		return this.kisClient.todayExecutions();
+	}
+
+	@ExceptionHandler(IllegalArgumentException.class)
+	ResponseEntity<Map<String, String>> badRequest(IllegalArgumentException ex) {
+		return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
 	}
 }
