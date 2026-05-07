@@ -1,0 +1,79 @@
+---
+title: KIS Quant Final DB ERD
+---
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","primaryColor":"#f8fafc","primaryBorderColor":"#334155","primaryTextColor":"#0f172a","lineColor":"#475569","textColor":"#0f172a"}}}%%
+erDiagram
+    STRATEGIES ||--o{ ORDERS : "logical strategy_id"
+    STRATEGIES ||--o{ EXECUTIONS : "logical strategy_id"
+    STRATEGIES ||--o{ STRATEGY_POSITIONS : "logical strategy_id"
+    STRATEGIES ||--o{ STRATEGY_LOGS : "logical strategy_id"
+    ORDERS ||--o{ EXECUTIONS : "logical order_id"
+
+    STRATEGIES {
+        BIGINT id PK
+        VARCHAR name
+        VARCHAR status
+        BOOLEAN enabled
+        VARCHAR trade_mode
+        BIGINT initial_budget_amount
+        BIGINT max_order_amount
+        BIGINT max_daily_order_amount
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    ORDERS {
+        BIGINT id PK
+        BIGINT strategy_id
+        VARCHAR symbol
+        VARCHAR side
+        VARCHAR trade_mode
+        VARCHAR order_type
+        BIGINT quantity
+        BIGINT order_price
+        VARCHAR status
+        VARCHAR kis_order_no
+        VARCHAR kis_order_org_no
+        DATETIME requested_at
+        DATETIME accepted_at
+        DATETIME last_synced_at
+        VARCHAR reject_code
+        VARCHAR reject_message
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    EXECUTIONS {
+        BIGINT id PK
+        BIGINT order_id
+        BIGINT strategy_id
+        VARCHAR symbol
+        VARCHAR side
+        VARCHAR execution_source
+        BIGINT executed_quantity
+        BIGINT executed_price
+        BIGINT executed_amount
+        BIGINT fee
+        BIGINT tax
+        DATETIME executed_at
+        VARCHAR dedup_key UK
+        DATETIME created_at
+    }
+
+    STRATEGY_POSITIONS {
+        BIGINT strategy_id PK
+        VARCHAR symbol PK
+        BIGINT quantity
+        BIGINT avg_price
+        BIGINT realized_pnl
+        DATETIME updated_at
+    }
+
+    STRATEGY_LOGS {
+        BIGINT id PK
+        BIGINT strategy_id
+        VARCHAR level
+        VARCHAR message
+        JSON payload_json
+        DATETIME created_at
+    }
