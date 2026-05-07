@@ -78,4 +78,22 @@ final class Controller {
 		this.orderGuard.validateMarketOrder(this.orderGuard.allowedSymbol(), this.orderGuard.fixedOrderQuantity());
 		return this.kisClient.marketSell();
 	}
+
+	@GetMapping("/orders/{kisOrderNo}")
+	CallResult orderStatus(
+			@PathVariable String kisOrderNo,
+			@RequestParam(required = false, defaultValue = "") String krxOrderOrgNo
+	) {
+		return this.kisClient.orderStatus(kisOrderNo, krxOrderOrgNo);
+	}
+
+	@PostMapping("/orders/{kisOrderNo}/cancel")
+	CallResult cancel(@PathVariable String kisOrderNo, @RequestParam String krxOrderOrgNo) {
+		return this.kisClient.cancel(kisOrderNo, krxOrderOrgNo);
+	}
+
+	@GetMapping("/executions/today")
+	CallResult todayExecutions() {
+		return this.kisClient.todayExecutions();
+	}
 }
