@@ -11,6 +11,8 @@ p_env
 p_env.properties
 v1/p_env
 v1/p_env.properties
+v2/p_env
+v2/p_env.properties
 .env
 
 # IDE
