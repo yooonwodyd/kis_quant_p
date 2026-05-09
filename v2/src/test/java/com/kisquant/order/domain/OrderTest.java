@@ -81,6 +81,32 @@ class OrderTest {
 		assertThat(order.kisOrderNumber()).isEmpty();
 	}
 
+	@Test
+	void onlyUnfinishedLiveOrdersArePollingTargets() {
+		Order accepted = liveOrder();
+		accepted.accept(KisOrderNumber.of("0007103300"), KisOrderOrgNumber.of("06010"), Instant.parse("2026-05-09T02:00:01Z"));
+
+		Order unknown = Order.requested(
+				OrderId.of(3L),
+				StrategyId.of(1L),
+				Symbol.of("001510"),
+				OrderSide.BUY,
+				TradeMode.LIVE,
+				OrderType.LIMIT,
+				OrderQuantity.of(1L),
+				Money.won(1_000L),
+				Instant.parse("2026-05-09T02:00:00Z")
+		);
+		unknown.markUnknown("KIS 주문 응답 확인 필요");
+
+		Order simulation = simulationOrder();
+		simulation.fillBySimulation(Instant.parse("2026-05-09T02:00:01Z"));
+
+		assertThat(accepted.isPollingTarget()).isTrue();
+		assertThat(unknown.isPollingTarget()).isTrue();
+		assertThat(simulation.isPollingTarget()).isFalse();
+	}
+
 	private Order liveOrder() {
 		return Order.requested(
 				OrderId.of(1L),
