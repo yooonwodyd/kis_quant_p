@@ -71,6 +71,9 @@ public final class Order {
 
 	public void accept(KisOrderNumber kisOrderNumber, KisOrderOrgNumber kisOrderOrgNumber, Instant acceptedAt) {
 		requireStatus(OrderStatus.REQUESTED);
+		if (this.tradeMode != TradeMode.LIVE) {
+			throw new IllegalStateException("only live orders can have KIS identifiers");
+		}
 		this.kisOrderNumber = Objects.requireNonNull(kisOrderNumber, "kisOrderNumber must not be null");
 		this.kisOrderOrgNumber = Objects.requireNonNull(kisOrderOrgNumber, "kisOrderOrgNumber must not be null");
 		this.acceptedAt = Objects.requireNonNull(acceptedAt, "acceptedAt must not be null");
@@ -88,6 +91,19 @@ public final class Order {
 		requireStatus(OrderStatus.REQUESTED);
 		this.rejectMessage = message;
 		this.status = OrderStatus.UNKNOWN;
+	}
+
+	/**
+	 * 내부 모의 체결로 주문을 완료한다.
+	 */
+	public void fillBySimulation(Instant filledAt) {
+		Objects.requireNonNull(filledAt, "filledAt must not be null");
+		requireStatus(OrderStatus.REQUESTED);
+		if (this.tradeMode != TradeMode.SIMULATION) {
+			throw new IllegalArgumentException("only simulation orders can be filled by simulation");
+		}
+		this.lastSyncedAt = filledAt;
+		this.status = OrderStatus.FILLED;
 	}
 
 	public void applyExecution(long cumulativeExecutedQuantity, Instant syncedAt) {
