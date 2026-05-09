@@ -117,6 +117,16 @@ public final class Order {
 				: OrderStatus.PARTIALLY_FILLED;
 	}
 
+	/**
+	 * KIS에 다시 확인해야 하는 LIVE 주문인지 판단한다.
+	 */
+	public boolean isPollingTarget() {
+		return this.tradeMode == TradeMode.LIVE
+				&& (this.status == OrderStatus.ACCEPTED
+				|| this.status == OrderStatus.PARTIALLY_FILLED
+				|| this.status == OrderStatus.UNKNOWN);
+	}
+
 	public OrderId id() {
 		return this.id;
 	}
