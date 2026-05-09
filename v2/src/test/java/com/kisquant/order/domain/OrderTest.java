@@ -60,6 +60,27 @@ class OrderTest {
 		)).isInstanceOf(IllegalArgumentException.class);
 	}
 
+	@Test
+	void simulationOrderCannotHaveKisIdentifiers() {
+		Order order = simulationOrder();
+
+		assertThatThrownBy(() -> order.accept(
+				KisOrderNumber.of("0007103300"),
+				KisOrderOrgNumber.of("06010"),
+				Instant.parse("2026-05-09T02:00:01Z")
+		)).isInstanceOf(IllegalStateException.class);
+	}
+
+	@Test
+	void simulationOrderCanBeFilledWithoutKisIdentifiers() {
+		Order order = simulationOrder();
+
+		order.fillBySimulation(Instant.parse("2026-05-09T02:00:01Z"));
+
+		assertThat(order.status()).isEqualTo(OrderStatus.FILLED);
+		assertThat(order.kisOrderNumber()).isEmpty();
+	}
+
 	private Order liveOrder() {
 		return Order.requested(
 				OrderId.of(1L),
@@ -67,6 +88,20 @@ class OrderTest {
 				Symbol.of("001510"),
 				OrderSide.BUY,
 				TradeMode.LIVE,
+				OrderType.LIMIT,
+				OrderQuantity.of(1L),
+				Money.won(1_000L),
+				Instant.parse("2026-05-09T02:00:00Z")
+		);
+	}
+
+	private Order simulationOrder() {
+		return Order.requested(
+				OrderId.of(2L),
+				StrategyId.of(1L),
+				Symbol.of("001510"),
+				OrderSide.BUY,
+				TradeMode.SIMULATION,
 				OrderType.LIMIT,
 				OrderQuantity.of(1L),
 				Money.won(1_000L),
