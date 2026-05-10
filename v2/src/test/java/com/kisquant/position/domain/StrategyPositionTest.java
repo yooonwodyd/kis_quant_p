@@ -48,6 +48,38 @@ class StrategyPositionTest {
 		))).isInstanceOf(IllegalArgumentException.class);
 	}
 
+	@Test
+	void sellExecutionsDecreaseQuantityAndIncreaseRealizedProfit() {
+		StrategyPosition position = StrategyPosition.empty(StrategyId.of(1L), Symbol.of("001510"));
+		position.applyExecution(execution(OrderSide.BUY, 2L, 1_000L));
+
+		position.applyExecution(execution(OrderSide.SELL, 1L, 1_200L));
+
+		assertThat(position.quantity()).isEqualTo(1L);
+		assertThat(position.avgPrice()).isEqualTo(Money.won(1_000L));
+		assertThat(position.realizedPnl()).isEqualTo(Money.won(200L));
+	}
+
+	@Test
+	void sellingAllQuantityResetsAveragePrice() {
+		StrategyPosition position = StrategyPosition.empty(StrategyId.of(1L), Symbol.of("001510"));
+		position.applyExecution(execution(OrderSide.BUY, 1L, 1_000L));
+
+		position.applyExecution(execution(OrderSide.SELL, 1L, 900L));
+
+		assertThat(position.quantity()).isZero();
+		assertThat(position.avgPrice()).isEqualTo(Money.ZERO);
+		assertThat(position.realizedPnl()).isEqualTo(Money.won(-100L));
+	}
+
+	@Test
+	void sellExecutionCannotMakeNegativeQuantity() {
+		StrategyPosition position = StrategyPosition.empty(StrategyId.of(1L), Symbol.of("001510"));
+
+		assertThatThrownBy(() -> position.applyExecution(execution(OrderSide.SELL, 1L, 1_000L)))
+				.isInstanceOf(IllegalArgumentException.class);
+	}
+
 	private Execution execution(OrderSide side, long quantity, long price) {
 		return Execution.create(
 				ExecutionId.of(1L),
