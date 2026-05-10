@@ -51,7 +51,7 @@ public final class StrategyPosition {
 			applyBuy(targetExecution);
 			return;
 		}
-		throw new UnsupportedOperationException("sell position update is not implemented yet");
+		applySell(targetExecution);
 	}
 
 	public Money acquisitionAmount() {
@@ -83,6 +83,18 @@ public final class StrategyPosition {
 		Money newAmount = acquisitionAmount().plus(execution.executedAmount());
 		this.quantity = newQuantity;
 		this.avgPrice = Money.won(newAmount.amount() / newQuantity);
+	}
+
+	private void applySell(Execution execution) {
+		if (execution.executedQuantity() > this.quantity) {
+			throw new IllegalArgumentException("sell quantity exceeds position quantity");
+		}
+		Money unitProfit = execution.executedPrice().minus(this.avgPrice);
+		this.realizedPnl = this.realizedPnl.plus(unitProfit.multiply(execution.executedQuantity()));
+		this.quantity = Math.subtractExact(this.quantity, execution.executedQuantity());
+		if (this.quantity == 0L) {
+			this.avgPrice = Money.ZERO;
+		}
 	}
 
 	private void validateSamePosition(Execution execution) {
