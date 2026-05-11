@@ -3,6 +3,7 @@ package com.kisquant.shared.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.kisquant.execution.domain.ExecutionId;
 import org.junit.jupiter.api.Test;
 
 class DomainIdTest {

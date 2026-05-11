@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Instant;
 
 import com.kisquant.order.domain.OrderSide;
-import com.kisquant.shared.domain.ExecutionId;
 import com.kisquant.shared.domain.Money;
 import com.kisquant.shared.domain.OrderId;
 import com.kisquant.shared.domain.StrategyId;
