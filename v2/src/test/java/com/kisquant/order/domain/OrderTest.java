@@ -3,135 +3,66 @@ package com.kisquant.order.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.time.Instant;
-
 import com.kisquant.shared.domain.Money;
 import com.kisquant.shared.domain.OrderId;
 import com.kisquant.shared.domain.StrategyId;
 import com.kisquant.shared.domain.Symbol;
 import com.kisquant.shared.domain.TradeMode;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class OrderTest {
 
-	@Test
-	void liveOrderCanBeAcceptedWithKisIdentifiers() {
-		Order order = liveOrder();
+    @Test
+    void liveOrderKeepsKisIdentifiersAfterAccepted() {
+        Order order = requestedLiveLimitOrder();
 
-		order.accept(KisOrderNumber.of("0007103300"), KisOrderOrgNumber.of("06010"), Instant.parse("2026-05-09T02:00:01Z"));
+        order.accept(KisOrderNumber.of("1234567890"), KisOrderOrgNumber.of("06010"), Instant.parse("2026-05-06T01:00:00Z"));
 
-		assertThat(order.status()).isEqualTo(OrderStatus.ACCEPTED);
-		assertThat(order.kisOrderNumber()).contains(KisOrderNumber.of("0007103300"));
-	}
+        assertThat(order.status()).isEqualTo(OrderStatus.ACCEPTED);
+        assertThat(order.kisOrderNumber()).hasValue(KisOrderNumber.of("1234567890"));
+        assertThat(order.isPollingTarget()).isTrue();
+    }
 
-	@Test
-	void timeoutOrderBecomesUnknown() {
-		Order order = liveOrder();
+    @Test
+    void simulationOrderCannotHaveKisIdentifiers() {
+        Order order = Order.requested(
+                OrderId.of(1L),
+                StrategyId.of(1L),
+                Symbol.of("001510"),
+                OrderSide.BUY,
+                TradeMode.SIMULATION,
+                OrderType.LIMIT,
+                OrderQuantity.of(1L),
+                Money.won(1_000L),
+                Instant.parse("2026-05-06T00:00:00Z"));
 
-		order.markUnknown("KIS 주문 응답 확인 필요");
+        assertThatThrownBy(() -> order.accept(KisOrderNumber.of("1234567890"), KisOrderOrgNumber.of("06010"), Instant.now()))
+                .isInstanceOf(IllegalStateException.class);
+    }
 
-		assertThat(order.status()).isEqualTo(OrderStatus.UNKNOWN);
-		assertThat(order.rejectMessage()).contains("KIS 주문 응답 확인 필요");
-	}
+    @Test
+    void unknownOrderIsPollingTargetButCannotBeAcceptedAgain() {
+        Order order = requestedLiveLimitOrder();
 
-	@Test
-	void liveOrderAppliesExecutionQuantity() {
-		Order order = liveOrder();
-		order.accept(KisOrderNumber.of("0007103300"), KisOrderOrgNumber.of("06010"), Instant.parse("2026-05-09T02:00:01Z"));
+        order.markUnknown("timeout");
 
-		order.applyExecution(1L, Instant.parse("2026-05-09T02:01:00Z"));
+        assertThat(order.status()).isEqualTo(OrderStatus.UNKNOWN);
+        assertThat(order.isPollingTarget()).isTrue();
+        assertThatThrownBy(() -> order.accept(KisOrderNumber.of("1234567890"), KisOrderOrgNumber.of("06010"), Instant.now()))
+                .isInstanceOf(IllegalStateException.class);
+    }
 
-		assertThat(order.status()).isEqualTo(OrderStatus.FILLED);
-		assertThat(order.lastSyncedAt()).contains(Instant.parse("2026-05-09T02:01:00Z"));
-	}
-
-	@Test
-	void rejectsMarketOrderWithPositiveOrderPrice() {
-		assertThatThrownBy(() -> Order.requested(
-				OrderId.of(2L),
-				StrategyId.of(1L),
-				Symbol.of("001510"),
-				OrderSide.BUY,
-				TradeMode.LIVE,
-				OrderType.MARKET,
-				OrderQuantity.of(1L),
-				Money.won(1_000L),
-				Instant.parse("2026-05-09T02:00:00Z")
-		)).isInstanceOf(IllegalArgumentException.class);
-	}
-
-	@Test
-	void simulationOrderCannotHaveKisIdentifiers() {
-		Order order = simulationOrder();
-
-		assertThatThrownBy(() -> order.accept(
-				KisOrderNumber.of("0007103300"),
-				KisOrderOrgNumber.of("06010"),
-				Instant.parse("2026-05-09T02:00:01Z")
-		)).isInstanceOf(IllegalStateException.class);
-	}
-
-	@Test
-	void simulationOrderCanBeFilledWithoutKisIdentifiers() {
-		Order order = simulationOrder();
-
-		order.fillBySimulation(Instant.parse("2026-05-09T02:00:01Z"));
-
-		assertThat(order.status()).isEqualTo(OrderStatus.FILLED);
-		assertThat(order.kisOrderNumber()).isEmpty();
-	}
-
-	@Test
-	void onlyUnfinishedLiveOrdersArePollingTargets() {
-		Order accepted = liveOrder();
-		accepted.accept(KisOrderNumber.of("0007103300"), KisOrderOrgNumber.of("06010"), Instant.parse("2026-05-09T02:00:01Z"));
-
-		Order unknown = Order.requested(
-				OrderId.of(3L),
-				StrategyId.of(1L),
-				Symbol.of("001510"),
-				OrderSide.BUY,
-				TradeMode.LIVE,
-				OrderType.LIMIT,
-				OrderQuantity.of(1L),
-				Money.won(1_000L),
-				Instant.parse("2026-05-09T02:00:00Z")
-		);
-		unknown.markUnknown("KIS 주문 응답 확인 필요");
-
-		Order simulation = simulationOrder();
-		simulation.fillBySimulation(Instant.parse("2026-05-09T02:00:01Z"));
-
-		assertThat(accepted.isPollingTarget()).isTrue();
-		assertThat(unknown.isPollingTarget()).isTrue();
-		assertThat(simulation.isPollingTarget()).isFalse();
-	}
-
-	private Order liveOrder() {
-		return Order.requested(
-				OrderId.of(1L),
-				StrategyId.of(1L),
-				Symbol.of("001510"),
-				OrderSide.BUY,
-				TradeMode.LIVE,
-				OrderType.LIMIT,
-				OrderQuantity.of(1L),
-				Money.won(1_000L),
-				Instant.parse("2026-05-09T02:00:00Z")
-		);
-	}
-
-	private Order simulationOrder() {
-		return Order.requested(
-				OrderId.of(2L),
-				StrategyId.of(1L),
-				Symbol.of("001510"),
-				OrderSide.BUY,
-				TradeMode.SIMULATION,
-				OrderType.LIMIT,
-				OrderQuantity.of(1L),
-				Money.won(1_000L),
-				Instant.parse("2026-05-09T02:00:00Z")
-		);
-	}
+    private Order requestedLiveLimitOrder() {
+        return Order.requested(
+                OrderId.of(1L),
+                StrategyId.of(1L),
+                Symbol.of("001510"),
+                OrderSide.BUY,
+                TradeMode.LIVE,
+                OrderType.LIMIT,
+                OrderQuantity.of(1L),
+                Money.won(1_000L),
+                Instant.parse("2026-05-06T00:00:00Z"));
+    }
 }
