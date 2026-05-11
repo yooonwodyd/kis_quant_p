@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: kis-quant
+  config:
+    import: optional:file:./src/main/resources/p_env.properties
+  datasource:
+    url: ${QUANT_DB_URL}
+    username: ${KIS_QUANT_DB_USERNAME}
+    password: ${KIS_QUANT_DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+kis-quant:
+  trading:
+    allowed-symbols: ${QUANT_ALLOWED_SYMBOLS}
+    strategy-initial-budget-krw: ${QUANT_STRATEGY_INITIAL_BUDGET_KRW}
+    max-order-krw: ${QUANT_REAL_MAX_ORDER_KRW}
+    max-daily-order-krw: ${QUANT_DAILY_MAX_ORDER_KRW}
+  startup-sync:
+    enabled: ${KIS_QUANT_STARTUP_SYNC_ENABLED}
+  polling:
+    enabled: ${KIS_QUANT_POLLING_ENABLED}
+    interval: ${KIS_QUANT_POLLING_INTERVAL}
+    batch-size: ${KIS_QUANT_POLLING_BATCH_SIZE}
+  operation-logs:
+    capacity: ${KIS_QUANT_OPERATION_LOG_CAPACITY}
+  kis:
+    base-url: ${KIS_BASE_URL_REAL}
+    app-key: ${KIS_APP_KEY_REAL}
+    app-secret: ${KIS_APP_SECRET_REAL}
+    account-number: ${KIS_REAL_DOMESTIC_STOCK_CANO}
+    account-product-code: ${KIS_REAL_DOMESTIC_STOCK_ACNT_PRDT_CD}
+    timeout: ${KIS_TIMEOUT}
