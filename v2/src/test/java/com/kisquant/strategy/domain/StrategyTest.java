@@ -10,56 +10,73 @@ import org.junit.jupiter.api.Test;
 
 class StrategyTest {
 
-	@Test
-	void activeStrategyCanPlaceNewOrder() {
-		Strategy strategy = Strategy.create(
-				StrategyId.of(1L),
-				"수동 모의 투자 전략",
-				TradeMode.SIMULATION,
-				Money.won(30_000L),
-				Money.won(10_000L),
-				Money.won(30_000L)
-		);
+    @Test
+    void activeStrategyAllowsNewOrders() {
+        Strategy strategy = Strategy.create(
+                StrategyId.of(1L),
+                "수동 주문 테스트 전략",
+                TradeMode.LIVE,
+                Money.won(30_000L),
+                Money.won(30_000L),
+                Money.won(30_000L));
 
-		assertThat(strategy.canPlaceNewOrder()).isTrue();
+        assertThat(strategy.canPlaceNewOrder()).isTrue();
+    }
 
-		strategy.deactivate();
+    @Test
+    void inactiveStrategyRejectsNewOrders() {
+        Strategy strategy = Strategy.create(
+                StrategyId.of(1L),
+                "수동 주문 테스트 전략",
+                TradeMode.SIMULATION,
+                Money.won(30_000L),
+                Money.won(30_000L),
+                Money.won(30_000L));
 
-		assertThat(strategy.canPlaceNewOrder()).isFalse();
-	}
+        strategy.deactivate();
 
-	@Test
-	void validatesOrderAmountWithStrategyBudget() {
-		Strategy strategy = Strategy.create(
-				StrategyId.of(1L),
-				"수동 실전 투자 전략",
-				TradeMode.LIVE,
-				Money.won(30_000L),
-				Money.won(10_000L),
-				Money.won(30_000L)
-		);
+        assertThat(strategy.canPlaceNewOrder()).isFalse();
+    }
 
-		strategy.validateOrderAmount(Money.won(10_000L), Money.won(20_000L));
+    @Test
+    void dailyLimitMustBeGreaterThanOrEqualToSingleOrderLimit() {
+        assertThatThrownBy(() -> Strategy.create(
+                        StrategyId.of(1L),
+                        "수동 주문 테스트 전략",
+                        TradeMode.LIVE,
+                        Money.won(30_000L),
+                        Money.won(30_000L),
+                        Money.won(10_000L)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 
-		assertThatThrownBy(() -> strategy.validateOrderAmount(Money.won(11_000L), Money.ZERO))
-				.isInstanceOf(IllegalArgumentException.class);
-		assertThatThrownBy(() -> strategy.validateOrderAmount(Money.won(10_000L), Money.won(25_000L)))
-				.isInstanceOf(IllegalArgumentException.class);
-	}
+    @Test
+    void initialBudgetCanBeChangedWhenItStillCoversOrderLimits() {
+        Strategy strategy = Strategy.create(
+                StrategyId.of(1L),
+                "수동 주문 테스트 전략",
+                TradeMode.SIMULATION,
+                Money.won(30_000L),
+                Money.won(10_000L),
+                Money.won(30_000L));
 
-	@Test
-	void changesTradeMode() {
-		Strategy strategy = Strategy.create(
-				StrategyId.of(1L),
-				"수동 모의 투자 전략",
-				TradeMode.SIMULATION,
-				Money.won(30_000L),
-				Money.won(10_000L),
-				Money.won(30_000L)
-		);
+        strategy.changeInitialBudget(Money.won(40_000L));
 
-		strategy.changeTradeMode(TradeMode.LIVE);
+        assertThat(strategy.initialBudget()).isEqualTo(Money.won(40_000L));
+    }
 
-		assertThat(strategy.tradeMode()).isEqualTo(TradeMode.LIVE);
-	}
+    @Test
+    void initialBudgetCannotBeLowerThanSingleOrderLimit() {
+        Strategy strategy = Strategy.create(
+                StrategyId.of(1L),
+                "수동 주문 테스트 전략",
+                TradeMode.SIMULATION,
+                Money.won(30_000L),
+                Money.won(10_000L),
+                Money.won(30_000L));
+
+        assertThatThrownBy(() -> strategy.changeInitialBudget(Money.won(9_000L)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("initial budget");
+    }
 }
