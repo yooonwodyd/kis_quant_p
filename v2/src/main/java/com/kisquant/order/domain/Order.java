@@ -1,210 +1,237 @@
 package com.kisquant.order.domain;
 
-import java.time.Instant;
-import java.util.Objects;
-import java.util.Optional;
-
 import com.kisquant.shared.domain.Money;
 import com.kisquant.shared.domain.OrderId;
 import com.kisquant.shared.domain.StrategyId;
 import com.kisquant.shared.domain.Symbol;
 import com.kisquant.shared.domain.TradeMode;
+import java.time.Instant;
+import java.util.Objects;
+import java.util.Optional;
 
-/**
- * Spring이 접수한 주문.
- */
 public final class Order {
 
-	private final OrderId id;
-	private final StrategyId strategyId;
-	private final Symbol symbol;
-	private final OrderSide side;
-	private final TradeMode tradeMode;
-	private final OrderType orderType;
-	private final OrderQuantity quantity;
-	private final Money orderPrice;
-	private final Instant requestedAt;
-	private OrderStatus status;
-	private KisOrderNumber kisOrderNumber;
-	private KisOrderOrgNumber kisOrderOrgNumber;
-	private Instant acceptedAt;
-	private Instant lastSyncedAt;
-	private String rejectCode;
-	private String rejectMessage;
+    private final OrderId id;
+    private final StrategyId strategyId;
+    private final Symbol symbol;
+    private final OrderSide side;
+    private final TradeMode tradeMode;
+    private final OrderType orderType;
+    private final OrderQuantity quantity;
+    private final Money orderPrice;
+    private final Instant requestedAt;
+    private OrderStatus status;
+    private KisOrderNumber kisOrderNumber;
+    private KisOrderOrgNumber kisOrderOrgNumber;
+    private Instant acceptedAt;
+    private Instant lastSyncedAt;
+    private String rejectCode;
+    private String rejectMessage;
 
-	private Order(
-			OrderId id,
-			StrategyId strategyId,
-			Symbol symbol,
-			OrderSide side,
-			TradeMode tradeMode,
-			OrderType orderType,
-			OrderQuantity quantity,
-			Money orderPrice,
-			Instant requestedAt
-	) {
-		this.id = Objects.requireNonNull(id, "id must not be null");
-		this.strategyId = Objects.requireNonNull(strategyId, "strategyId must not be null");
-		this.symbol = Objects.requireNonNull(symbol, "symbol must not be null");
-		this.side = Objects.requireNonNull(side, "side must not be null");
-		this.tradeMode = Objects.requireNonNull(tradeMode, "tradeMode must not be null");
-		this.orderType = Objects.requireNonNull(orderType, "orderType must not be null");
-		this.quantity = Objects.requireNonNull(quantity, "quantity must not be null");
-		this.orderPrice = validateOrderPrice(orderType, orderPrice);
-		this.requestedAt = Objects.requireNonNull(requestedAt, "requestedAt must not be null");
-		this.status = OrderStatus.REQUESTED;
-	}
+    private Order(
+            OrderId id,
+            StrategyId strategyId,
+            Symbol symbol,
+            OrderSide side,
+            TradeMode tradeMode,
+            OrderType orderType,
+            OrderQuantity quantity,
+            Money orderPrice,
+            Instant requestedAt
+    ) {
+        this.id = Objects.requireNonNull(id, "id must not be null");
+        this.strategyId = Objects.requireNonNull(strategyId, "strategyId must not be null");
+        this.symbol = Objects.requireNonNull(symbol, "symbol must not be null");
+        this.side = Objects.requireNonNull(side, "side must not be null");
+        this.tradeMode = Objects.requireNonNull(tradeMode, "tradeMode must not be null");
+        this.orderType = Objects.requireNonNull(orderType, "orderType must not be null");
+        this.quantity = Objects.requireNonNull(quantity, "quantity must not be null");
+        this.orderPrice = validateOrderPrice(orderType, orderPrice);
+        this.requestedAt = Objects.requireNonNull(requestedAt, "requestedAt must not be null");
+        this.status = OrderStatus.REQUESTED;
+    }
 
-	public static Order requested(
-			OrderId id,
-			StrategyId strategyId,
-			Symbol symbol,
-			OrderSide side,
-			TradeMode tradeMode,
-			OrderType orderType,
-			OrderQuantity quantity,
-			Money orderPrice,
-			Instant requestedAt
-	) {
-		return new Order(id, strategyId, symbol, side, tradeMode, orderType, quantity, orderPrice, requestedAt);
-	}
+    public static Order requested(
+            OrderId id,
+            StrategyId strategyId,
+            Symbol symbol,
+            OrderSide side,
+            TradeMode tradeMode,
+            OrderType orderType,
+            OrderQuantity quantity,
+            Money orderPrice,
+            Instant requestedAt
+    ) {
+        return new Order(id, strategyId, symbol, side, tradeMode, orderType, quantity, orderPrice, requestedAt);
+    }
 
-	public void accept(KisOrderNumber kisOrderNumber, KisOrderOrgNumber kisOrderOrgNumber, Instant acceptedAt) {
-		requireStatus(OrderStatus.REQUESTED);
-		if (this.tradeMode != TradeMode.LIVE) {
-			throw new IllegalStateException("only live orders can have KIS identifiers");
-		}
-		this.kisOrderNumber = Objects.requireNonNull(kisOrderNumber, "kisOrderNumber must not be null");
-		this.kisOrderOrgNumber = Objects.requireNonNull(kisOrderOrgNumber, "kisOrderOrgNumber must not be null");
-		this.acceptedAt = Objects.requireNonNull(acceptedAt, "acceptedAt must not be null");
-		this.status = OrderStatus.ACCEPTED;
-	}
+    public static Order restore(
+            OrderId id,
+            StrategyId strategyId,
+            Symbol symbol,
+            OrderSide side,
+            TradeMode tradeMode,
+            OrderType orderType,
+            OrderQuantity quantity,
+            Money orderPrice,
+            OrderStatus status,
+            Instant requestedAt,
+            Instant acceptedAt,
+            Instant lastSyncedAt,
+            KisOrderNumber kisOrderNumber,
+            KisOrderOrgNumber kisOrderOrgNumber,
+            String rejectCode,
+            String rejectMessage
+    ) {
+        Order order = new Order(id, strategyId, symbol, side, tradeMode, orderType, quantity, orderPrice, requestedAt);
+        order.status = Objects.requireNonNull(status, "status must not be null");
+        order.acceptedAt = acceptedAt;
+        order.lastSyncedAt = lastSyncedAt;
+        order.kisOrderNumber = kisOrderNumber;
+        order.kisOrderOrgNumber = kisOrderOrgNumber;
+        order.rejectCode = rejectCode;
+        order.rejectMessage = rejectMessage;
+        return order;
+    }
 
-	public void reject(String rejectCode, String rejectMessage) {
-		requireStatus(OrderStatus.REQUESTED);
-		this.rejectCode = rejectCode;
-		this.rejectMessage = rejectMessage;
-		this.status = OrderStatus.REJECTED;
-	}
+    public void accept(KisOrderNumber kisOrderNumber, KisOrderOrgNumber kisOrderOrgNumber, Instant acceptedAt) {
+        requireStatus(OrderStatus.REQUESTED);
+        if (tradeMode != TradeMode.LIVE) {
+            throw new IllegalStateException("only live orders can have KIS identifiers");
+        }
+        this.kisOrderNumber = Objects.requireNonNull(kisOrderNumber, "kisOrderNumber must not be null");
+        this.kisOrderOrgNumber = Objects.requireNonNull(kisOrderOrgNumber, "kisOrderOrgNumber must not be null");
+        this.acceptedAt = Objects.requireNonNull(acceptedAt, "acceptedAt must not be null");
+        this.status = OrderStatus.ACCEPTED;
+    }
 
-	public void markUnknown(String message) {
-		requireStatus(OrderStatus.REQUESTED);
-		this.rejectMessage = message;
-		this.status = OrderStatus.UNKNOWN;
-	}
+    public void reject(String rejectCode, String rejectMessage) {
+        requireStatus(OrderStatus.REQUESTED);
+        this.rejectCode = rejectCode;
+        this.rejectMessage = rejectMessage;
+        this.status = OrderStatus.REJECTED;
+    }
 
-	/**
-	 * 내부 모의 체결로 주문을 완료한다.
-	 */
-	public void fillBySimulation(Instant filledAt) {
-		Objects.requireNonNull(filledAt, "filledAt must not be null");
-		requireStatus(OrderStatus.REQUESTED);
-		if (this.tradeMode != TradeMode.SIMULATION) {
-			throw new IllegalArgumentException("only simulation orders can be filled by simulation");
-		}
-		this.lastSyncedAt = filledAt;
-		this.status = OrderStatus.FILLED;
-	}
+    public void markUnknown(String message) {
+        requireStatus(OrderStatus.REQUESTED);
+        this.rejectMessage = message;
+        this.status = OrderStatus.UNKNOWN;
+    }
 
-	public void applyExecution(long cumulativeExecutedQuantity, Instant syncedAt) {
-		Objects.requireNonNull(syncedAt, "syncedAt must not be null");
-		if (cumulativeExecutedQuantity <= 0L) {
-			throw new IllegalArgumentException("cumulative executed quantity must be positive");
-		}
-		this.lastSyncedAt = syncedAt;
-		this.status = cumulativeExecutedQuantity >= this.quantity.value()
-				? OrderStatus.FILLED
-				: OrderStatus.PARTIALLY_FILLED;
-	}
+    public void fillBySimulation(Instant filledAt) {
+        Objects.requireNonNull(filledAt, "filledAt must not be null");
+        requireStatus(OrderStatus.REQUESTED);
+        if (tradeMode != TradeMode.SIMULATION) {
+            throw new IllegalArgumentException("only simulation orders can be filled by simulation");
+        }
+        this.status = OrderStatus.FILLED;
+    }
 
-	/**
-	 * KIS에 다시 확인해야 하는 LIVE 주문인지 판단한다.
-	 */
-	public boolean isPollingTarget() {
-		return this.tradeMode == TradeMode.LIVE
-				&& (this.status == OrderStatus.ACCEPTED
-				|| this.status == OrderStatus.PARTIALLY_FILLED
-				|| this.status == OrderStatus.UNKNOWN);
-	}
+    public void applyExecution(long cumulativeExecutedQuantity, Instant syncedAt) {
+        Objects.requireNonNull(syncedAt, "syncedAt must not be null");
+        if (!isPollingTarget()) {
+            throw new IllegalStateException("order is not a polling target");
+        }
+        if (cumulativeExecutedQuantity <= 0L) {
+            throw new IllegalArgumentException("cumulative executed quantity must be positive");
+        }
+        this.lastSyncedAt = syncedAt;
+        this.status = cumulativeExecutedQuantity >= quantity.value() ? OrderStatus.FILLED : OrderStatus.PARTIALLY_FILLED;
+    }
 
-	public OrderId id() {
-		return this.id;
-	}
+    public void markCanceled(Instant canceledAt) {
+        Objects.requireNonNull(canceledAt, "canceledAt must not be null");
+        if (status == OrderStatus.FILLED || status == OrderStatus.REJECTED) {
+            throw new IllegalStateException("finished order cannot be canceled");
+        }
+        this.status = OrderStatus.CANCELED;
+        this.lastSyncedAt = canceledAt;
+    }
 
-	public StrategyId strategyId() {
-		return this.strategyId;
-	}
+    public boolean isPollingTarget() {
+        return tradeMode == TradeMode.LIVE
+                && (status == OrderStatus.ACCEPTED || status == OrderStatus.PARTIALLY_FILLED || status == OrderStatus.UNKNOWN);
+    }
 
-	public Symbol symbol() {
-		return this.symbol;
-	}
+    public boolean isFilled() {
+        return status == OrderStatus.FILLED;
+    }
 
-	public OrderSide side() {
-		return this.side;
-	}
+    public OrderId id() {
+        return id;
+    }
 
-	public TradeMode tradeMode() {
-		return this.tradeMode;
-	}
+    public StrategyId strategyId() {
+        return strategyId;
+    }
 
-	public OrderType orderType() {
-		return this.orderType;
-	}
+    public Symbol symbol() {
+        return symbol;
+    }
 
-	public OrderQuantity quantity() {
-		return this.quantity;
-	}
+    public OrderSide side() {
+        return side;
+    }
 
-	public Money orderPrice() {
-		return this.orderPrice;
-	}
+    public TradeMode tradeMode() {
+        return tradeMode;
+    }
 
-	public Instant requestedAt() {
-		return this.requestedAt;
-	}
+    public OrderType orderType() {
+        return orderType;
+    }
 
-	public OrderStatus status() {
-		return this.status;
-	}
+    public OrderQuantity quantity() {
+        return quantity;
+    }
 
-	public Optional<KisOrderNumber> kisOrderNumber() {
-		return Optional.ofNullable(this.kisOrderNumber);
-	}
+    public Money orderPrice() {
+        return orderPrice;
+    }
 
-	public Optional<KisOrderOrgNumber> kisOrderOrgNumber() {
-		return Optional.ofNullable(this.kisOrderOrgNumber);
-	}
+    public Instant requestedAt() {
+        return requestedAt;
+    }
 
-	public Optional<Instant> acceptedAt() {
-		return Optional.ofNullable(this.acceptedAt);
-	}
+    public OrderStatus status() {
+        return status;
+    }
 
-	public Optional<Instant> lastSyncedAt() {
-		return Optional.ofNullable(this.lastSyncedAt);
-	}
+    public Optional<KisOrderNumber> kisOrderNumber() {
+        return Optional.ofNullable(kisOrderNumber);
+    }
 
-	public Optional<String> rejectCode() {
-		return Optional.ofNullable(this.rejectCode);
-	}
+    public Optional<KisOrderOrgNumber> kisOrderOrgNumber() {
+        return Optional.ofNullable(kisOrderOrgNumber);
+    }
 
-	public Optional<String> rejectMessage() {
-		return Optional.ofNullable(this.rejectMessage);
-	}
+    public Optional<Instant> acceptedAt() {
+        return Optional.ofNullable(acceptedAt);
+    }
 
-	private static Money validateOrderPrice(OrderType orderType, Money orderPrice) {
-		Money price = Objects.requireNonNull(orderPrice, "orderPrice must not be null");
-		if (orderType == OrderType.MARKET && !price.equals(Money.ZERO)) {
-			throw new IllegalArgumentException("market order price must be zero");
-		}
-		if (orderType == OrderType.LIMIT && !price.isPositive()) {
-			throw new IllegalArgumentException("limit order price must be positive");
-		}
-		return price;
-	}
+    public Optional<Instant> lastSyncedAt() {
+        return Optional.ofNullable(lastSyncedAt);
+    }
 
-	private void requireStatus(OrderStatus expected) {
-		if (this.status != expected) {
-			throw new IllegalStateException("order status must be " + expected);
-		}
-	}
+    public Optional<String> rejectCode() {
+        return Optional.ofNullable(rejectCode);
+    }
+
+    public Optional<String> rejectMessage() {
+        return Optional.ofNullable(rejectMessage);
+    }
+
+    private void requireStatus(OrderStatus requiredStatus) {
+        if (status != requiredStatus) {
+            throw new IllegalStateException("order status must be " + requiredStatus);
+        }
+    }
+
+    private static Money validateOrderPrice(OrderType orderType, Money orderPrice) {
+        Money price = Objects.requireNonNull(orderPrice, "orderPrice must not be null");
+        if (orderType == OrderType.LIMIT && !price.isPositive()) {
+            throw new IllegalArgumentException("limit order price must be positive");
+        }
+        return price;
+    }
 }
