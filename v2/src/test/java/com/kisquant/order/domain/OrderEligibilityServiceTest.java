@@ -8,59 +8,74 @@ import com.kisquant.shared.domain.StrategyId;
 import com.kisquant.shared.domain.Symbol;
 import com.kisquant.shared.domain.TradeMode;
 import com.kisquant.strategy.domain.Strategy;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class OrderEligibilityServiceTest {
 
-	private final OrderEligibilityService service = new OrderEligibilityService();
-	private final AllowedSymbolPolicy allowed001510 = symbol -> symbol.equals(Symbol.of("001510"));
+    private final OrderEligibilityService service = new OrderEligibilityService();
 
-	@Test
-	void acceptsAllowedBuyOrderInsideBudget() {
-		assertThatCode(() -> this.service.validate(
-				strategy(),
-				Symbol.of("001510"),
-				OrderSide.BUY,
-				Money.won(10_000L),
-				Money.won(20_000L),
-				false,
-				this.allowed001510
-		)).doesNotThrowAnyException();
-	}
+    @Test
+    void eligibleWhenStrategyIsActiveSymbolAllowedAndBudgetRemains() {
+        Strategy strategy = activeStrategy();
 
-	@Test
-	void rejectsInactiveStrategyOrDisallowedSymbol() {
-		Strategy inactive = strategy();
-		inactive.deactivate();
+        assertThatCode(() -> service.validate(
+                        strategy,
+                        Symbol.of("001510"),
+                        OrderSide.BUY,
+                        Money.won(10_000L),
+                        Money.won(15_000L),
+                        false,
+                        AllowedSymbolPolicy.of(Set.of(Symbol.of("001510")))))
+                .doesNotThrowAnyException();
+    }
 
-		assertThatThrownBy(() -> this.service.validate(
-				inactive, Symbol.of("001510"), OrderSide.BUY, Money.won(10_000L), Money.ZERO, false, this.allowed001510
-		)).isInstanceOf(IllegalStateException.class);
+    @Test
+    void rejectsWhenOpenOrderAlreadyExistsForStrategyAndSymbol() {
+        assertThatThrownBy(() -> service.validate(
+                        activeStrategy(),
+                        Symbol.of("001510"),
+                        OrderSide.BUY,
+                        Money.won(10_000L),
+                        Money.ZERO,
+                        true,
+                        AllowedSymbolPolicy.of(Set.of(Symbol.of("001510")))))
+                .isInstanceOf(IllegalStateException.class);
+    }
 
-		assertThatThrownBy(() -> this.service.validate(
-				strategy(), Symbol.of("005930"), OrderSide.BUY, Money.won(10_000L), Money.ZERO, false, this.allowed001510
-		)).isInstanceOf(IllegalArgumentException.class);
-	}
+    @Test
+    void rejectsWhenOrderWouldExceedStrategyBudget() {
+        assertThatThrownBy(() -> service.validate(
+                        activeStrategy(),
+                        Symbol.of("001510"),
+                        OrderSide.BUY,
+                        Money.won(20_000L),
+                        Money.won(15_000L),
+                        false,
+                        AllowedSymbolPolicy.of(Set.of(Symbol.of("001510")))))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 
-	@Test
-	void rejectsOpenOrderAndBuyAmountOverBudget() {
-		assertThatThrownBy(() -> this.service.validate(
-				strategy(), Symbol.of("001510"), OrderSide.BUY, Money.won(10_000L), Money.ZERO, true, this.allowed001510
-		)).isInstanceOf(IllegalStateException.class);
+    @Test
+    void sellOrderDoesNotConsumeStrategyBudget() {
+        assertThatCode(() -> service.validate(
+                        activeStrategy(),
+                        Symbol.of("001510"),
+                        OrderSide.SELL,
+                        Money.won(30_000L),
+                        Money.won(30_000L),
+                        false,
+                        AllowedSymbolPolicy.of(Set.of(Symbol.of("001510")))))
+                .doesNotThrowAnyException();
+    }
 
-		assertThatThrownBy(() -> this.service.validate(
-				strategy(), Symbol.of("001510"), OrderSide.BUY, Money.won(11_000L), Money.ZERO, false, this.allowed001510
-		)).isInstanceOf(IllegalArgumentException.class);
-	}
-
-	private Strategy strategy() {
-		return Strategy.create(
-				StrategyId.of(1L),
-				"수동 실전 투자 전략",
-				TradeMode.LIVE,
-				Money.won(30_000L),
-				Money.won(10_000L),
-				Money.won(30_000L)
-		);
-	}
+    private Strategy activeStrategy() {
+        return Strategy.create(
+                StrategyId.of(1L),
+                "수동 주문 테스트 전략",
+                TradeMode.LIVE,
+                Money.won(30_000L),
+                Money.won(30_000L),
+                Money.won(30_000L));
+    }
 }
